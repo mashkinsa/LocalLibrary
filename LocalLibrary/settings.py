@@ -22,10 +22,13 @@ LOGIN_REDIRECT_URL = '/'
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-4vxz=nj-ajr!v=1=fo7z=x0fff2c+zum=x3n^vzght4ngl%vb1'
+# SECRET_KEY = 'django-insecure-4vxz=nj-ajr!v=1=fo7z=x0fff2c+zum=x3n^vzght4ngl%vb1'
+import os
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'cg#p$g+j9tax!#a3cup@1$8obt2_+&k3q+pmu)5%asj6yjpkag')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG = True
+DEBUG = bool( os.environ.get('DJANGO_DEBUG', True) )
 
 ALLOWED_HOSTS = []
 
