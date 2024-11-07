@@ -2,7 +2,8 @@ from django.db import models
 from django.db.models import UniqueConstraint
 from django.db.models.functions import Lower
 from django.urls import reverse # Используется для генерации URL-адресов путем изменения шаблонов URL-адресов
-
+from django.contrib.auth.models import User
+from datetime import date
 # Create your models here.
 class Genre(models.Model):
 # Модель, представляющая книжный жанр
@@ -42,9 +43,7 @@ class BookInstance(models.Model):
     book = models.ForeignKey('Book', on_delete=models.SET_NULL, null=True)
     imprint = models.CharField(max_length=200)
     due_back = models.DateField(null=True, blank=True)
-    # status = models.CharField(max_length=200, default='доступен')
-
-
+    borrower = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 
     LOAN_STATUS = (
         ('m', 'Maintenance'),
@@ -56,13 +55,28 @@ class BookInstance(models.Model):
     status = models.CharField(max_length=1, choices=LOAN_STATUS, blank=True, default='m', help_text='Book availability')
 
 
+    @property
+    def is_overdue(self):
+    #Determines if the book is overdue based on due date and current date.
+        return bool(self.due_back and date.today() > self.due_back)
+
     class Meta:
         ordering = ["due_back"]
+        permissions = (("can_mark_returned", "Set book as returned"),)
 
 
     def __str__(self):
 # Строка для представления модельного объекта
         return '%s (%s)' % (self.id,self.book.title)
+
+    @property
+    def is_overdue(self):
+        if self.due_back and date.today() > self.due_back:
+            return True
+        return False
+
+
+
 
 class Author(models.Model):
 # Модель, представляющая автора.
