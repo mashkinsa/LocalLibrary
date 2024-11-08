@@ -1,0 +1,19 @@
+.sidebar-nav {
+  margin-top: 20px;
+  padding: 0;
+  list-style: none;
+}
+.logout-link {
+    background: none; /* Убирает фон */
+    border: none; /* Убирает рамку */
+    color: #337ab7; /* Цвет текста по умолчанию */
+    cursor: pointer; /* Указатель в виде руки */
+    padding: 0; /* Убирает отступы */
+    font: inherit; /* Наследует шрифт от родителя */
+    text-decoration: none; /* Убирает подчеркивание */
+}
+/* Стили при наведении */
+.logout-link:hover {
+    color: #23527c; /* Цвет текста при наведении */
+    text-decoration: underline; /* Подчеркивание текста при наведении */
+}
