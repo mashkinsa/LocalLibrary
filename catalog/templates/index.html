@@ -32,10 +32,10 @@
 <p>Количество жанров: {{ num_genre }}</p>
 <p>Количество книг с заголовком, содержащим
     {% if search_word %}
-        "{{ search_word }}"
+        "{{ search_word }}" : {{ num_books }}
     {% else %}
         "..."
-    {% endif %}: {{ num_books }}</p>
+    {% endif %}</p>
 
 {% endblock %}
 

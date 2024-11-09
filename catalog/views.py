@@ -1,6 +1,6 @@
+from django.db.models import Sum
 from django.http import Http404
-from django.shortcuts import render
-
+from django.shortcuts import render, redirect
 from .forms import RenewBookForm
 from .models import Book, Author, BookInstance, Genre, Language
 from django.views import generic
@@ -24,18 +24,8 @@ def index(request):  # Функция отображения для домашн
     # Количество посещений этого просмотра, подсчитанное в переменной сеанса.
     num_visits = request.session.get('num_visits', 0)
     request.session['num_visits'] = num_visits + 1
-
-    # Визуализируйте HTML-шаблон index.html с данными в контекстной переменной..
-    return render(
-        request,
-        'index.html',
-        context={'num_books': num_books, 'num_instances': num_instances,
-                 'num_instances_available': num_instances_available, 'num_authors': num_authors,
-                 'num_visits': num_visits},  # num_visits appended
-    )
-
     num_genre = Genre.objects.all().count()
-    search_word = None
+    search_word = ''
     if request.method == 'POST':
         search_word = request.POST.get('search_word', '').strip()
         # Проверяем, что слово для поиска не пустое
@@ -50,7 +40,7 @@ def index(request):  # Функция отображения для домашн
         'index.html',
         context={'num_books': num_books, 'num_instances': num_instances,
                  'num_instances_available': num_instances_available,
-                 'num_authors': num_authors, 'num_genre': num_genre, 'search_word': search_word},
+                 'num_authors': num_authors, 'num_genre': num_genre, 'search_word': search_word, 'num_visits': num_visits},
     )
 
 class BookListView(generic.ListView):
@@ -67,17 +57,21 @@ class AuthorDetailView(generic.DetailView):
     model = Author
 
 
-class LoanedBooksByUserListView(LoginRequiredMixin,generic.ListView):
-    # Общий просмотр на основе классов со списком книг, которые можно одолжить текущему пользователю.
+class LoanedBooksByUserListView(LoginRequiredMixin, generic.ListView):
     model = BookInstance
-    template_name ='catalog/bookinstance_list_borrowed_user.html'
+    template_name = 'catalog/bookinstance_list_borrowed_user.html'
     paginate_by = 10
     def get_queryset(self):
         return BookInstance.objects.filter(borrower=self.request.user).filter(status__exact='o').order_by('due_back')
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['bookinst_list'] = self.get_queryset()  # добавляем список книг в контекст
+        return context
 
 
 class LoanedBooksAllListView(PermissionRequiredMixin, generic.ListView):
-    """Generic class-based view listing all books on loan. Only visible to users with can_mark_returned permission."""
+    # Общее представление на основе классов со списком всех книг, которые можно взять напрокат.
+    # Доступно только пользователям с разрешением can_mark_returned.
     model = BookInstance
     permission_required = 'catalog.can_mark_returned'
     template_name = 'catalog/bookinstance_list_borrowed_all.html'
@@ -87,10 +81,40 @@ class LoanedBooksAllListView(PermissionRequiredMixin, generic.ListView):
         return BookInstance.objects.filter(status__exact='o').order_by('due_back')
 
 
+from django.shortcuts import get_object_or_404, redirect
+from django.views import View
+from .models import BookInstance
+
+
+class MarkBookAsReadView(View):
+    def post(self, request, pk):
+        book_instance = get_object_or_404(BookInstance, pk=pk, borrower=request.user)
+        # Получаем или создаем профиль пользователя
+        user_profile, created = UserProfile.objects.get_or_create(user=request.user)
+        # Обновляем общее количество страниц прочитанных пользователем
+        user_profile.total_pages_read += book_instance.book.pages  # Убедитесь, что book_instance.book.pages возвращает корректное значение
+        user_profile.save()  # Сохраняем изменения в профиле
+        # Обновляем статус книги
+        book_instance.status = 'a'  # Например, помечаем как доступную
+        book_instance.borrower = None
+        book_instance.save()  # Сохраняем изменения в книге
+        return redirect('my-borrowed')  # Перенаправляем на страницу с взятыми книгами
+
+
+from django.views.generic import ListView
+from .models import UserProfile
+class RankingListView(ListView):
+    model = UserProfile
+    template_name = 'catalog/rating.html'
+    context_object_name = 'user_profiles'
+    def get_queryset(self):
+        return UserProfile.objects.order_by('-total_pages_read')
+
+
 @login_required
 @permission_required('catalog.can_mark_returned', raise_exception=True)
 def renew_book_librarian(request, pk, book_inst=None):
-    """View function for renewing a specific BookInstance by librarian."""
+    # Функция просмотра для обновления библиотекарем конкретного экземпляра книги.
     book_instance = get_object_or_404(BookInstance, pk=pk)
 
     # If this is a POST request then process the Form data
@@ -115,6 +139,7 @@ def renew_book_librarian(request, pk, book_inst=None):
 
     return render(request, 'catalog/book_renew_librarian.html', {'form': form, 'bookinst':book_instance,})
 
+
 class AuthorCreate(CreateView):
     model = Author
     fields = '__all__'
@@ -130,7 +155,7 @@ class AuthorDelete(DeleteView):
 
 class BookCreate(PermissionRequiredMixin, CreateView):
     model = Book
-    fields = ['title', 'author', 'summary', 'isbn', 'genre', 'language']
+    fields = ['title', 'author', 'summary', 'isbn', 'genre','pages', 'language']
     permission_required = 'catalog.add_book'
 
 
@@ -153,3 +178,8 @@ class BookDelete(PermissionRequiredMixin, DeleteView):
             return HttpResponseRedirect(
                 reverse("book-delete", kwargs={"pk": self.object.pk})
             )
+
+@login_required
+def book_list(request):
+    books = Book.objects.all()
+    return render(request, 'book_list.html', {'books': books})

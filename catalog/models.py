@@ -4,11 +4,11 @@ from django.db.models.functions import Lower
 from django.urls import reverse # Используется для генерации URL-адресов путем изменения шаблонов URL-адресов
 from django.contrib.auth.models import User
 from datetime import date
+import uuid # Требуется для уникальных экземпляров книг
 # Create your models here.
 class Genre(models.Model):
 # Модель, представляющая книжный жанр
     name = models.CharField(max_length=200, help_text="Enter a book genre (e.g. Science Fiction, French Poetry etc.)")
-
     def __str__(self):
     # Строка для представления объекта модели (на сайте администратора и т.д.)
         return self.name
@@ -20,10 +20,9 @@ class Book(models.Model):
     isbn = models.CharField('ISBN',max_length=13, help_text='13 Character <a href="https://www.isbn-international.org/content/what-isbn">ISBN number</a>')
     genre = models.ManyToManyField(Genre, help_text="Select a genre for this book")
     language = models.ForeignKey('Language', on_delete=models.SET_NULL, null=True)
+    pages = models.PositiveIntegerField(default=0)
     def display_genre(self):
-        """
-        Creates a string for the Genre. This is required to display genre in Admin.
-        """
+        # Создает строку для жанра. Это необходимо для отображения жанра в Admin.
         return ', '.join([genre.name for genre in self.genre.all()[:3]])
 
     display_genre.short_description = 'Genre'
@@ -36,7 +35,14 @@ class Book(models.Model):
     # Возвращает URL-адрес для доступа к определенному экземпляру книги.
             return reverse('book-detail', args=[str(self.id)])
 
-import uuid # Требуется для уникальных экземпляров книг
+
+class UserProfile(models.Model):  # Модель профиля пользователя
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    total_pages_read = models.PositiveIntegerField(default=0)  # Общее количество прочитанных страниц
+
+    def __str__(self):
+        return self.user.username
+
 
 class BookInstance(models.Model):
 # Модель, представляющая конкретный экземпляр книги (т.е. ту, которую можно взять напрокат в библиотеке).
@@ -58,7 +64,7 @@ class BookInstance(models.Model):
 
     @property
     def is_overdue(self):
-    #Determines if the book is overdue based on due date and current date.
+    # Определяет, просрочена ли книга, исходя из срока оплаты и текущей даты.
         return bool(self.due_back and date.today() > self.due_back)
 
     class Meta:
@@ -75,8 +81,6 @@ class BookInstance(models.Model):
         if self.due_back and date.today() > self.due_back:
             return True
         return False
-
-
 
 
 class Author(models.Model):

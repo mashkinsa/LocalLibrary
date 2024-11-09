@@ -1,0 +1,16 @@
+{% extends "base_generic.html" %}
+{% block content %}
+<h1>User Rating</h1>
+<table>
+    <tr>
+        <th>Username</th>
+        <th>Total Pages Read</th>
+    </tr>
+    {% for profile in user_profiles %}
+    <tr>
+        <td>{{ profile.user.username }}</td>
+        <td>{{ profile.total_pages_read }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

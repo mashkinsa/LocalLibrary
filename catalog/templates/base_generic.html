@@ -29,7 +29,8 @@
                 {% if user.is_authenticated %}
                 <li>User: {{ user.get_username }}</li>
                 <li><a href="{% url 'my-borrowed' %}">My Borrowed</a></li>
-                <form method="post" action="{% url 'logout' %}"">
+                <li><a href="{% url 'rating' %}"> Rating </a></li>
+                <form method="post" action="{% url 'logout' %}">
                     {% csrf_token %}
                     <button type="submit" class="logout-link">Logout</button>
                 </form>

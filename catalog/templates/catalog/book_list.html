@@ -16,4 +16,15 @@
     {% else %}
       <p>There are no books in the library.</p>
     {% endif %}
+<ul>
+    {% for book in books %}
+        <li>
+            {{ book.title }} {{ book.author }} ({{ book.pages }} страниц)
+            <form action="{% url 'mark_as_read' book.id %}" method="post">
+                {% csrf_token %}
+                <button type="submit">Отметить как прочитанное</button>
+            </form>
+        </li>
+    {% endfor %}
+</ul>
 {% endblock %}
